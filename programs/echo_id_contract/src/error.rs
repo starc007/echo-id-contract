@@ -40,4 +40,20 @@ pub enum EchoIDError {
 
     #[msg("Cross-chain account not initialized")]
     CrossChainAccountNotInitialized,
+
+    #[msg("Invalid username format")]
+    InvalidUsername,
+    #[msg("Invalid chain type")]
+    InvalidChainType,
+    #[msg("Unauthorized")]
+    Unauthorized,
+
+     #[msg("Invalid project suffix")]
+    InvalidProjectSuffix,
+
+    #[msg("Invalid alias")]
+    InvalidAlias,
+
+    #[msg("Address cannot be empty")]
+    EmptyAddress,
 }
