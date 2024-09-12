@@ -28,9 +28,6 @@ pub mod echo_id_contract {
         instructions::add_chain_mapping::handler(ctx, params)
     }
 
-    pub fn initialize_reputation(ctx: Context<InitializeReputation>, username: String, project_suffix: String) -> Result<()> {
-        instructions::initialize_reputation::handler(ctx, username, project_suffix)
-    }
 
     pub fn update_reputation(ctx: Context<UpdateReputation>, username: String, project_suffix: String, change: i64) -> Result<()> {
         instructions::update_reputation::handler(ctx, username, project_suffix, change)

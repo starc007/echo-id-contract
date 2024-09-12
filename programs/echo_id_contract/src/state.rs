@@ -17,6 +17,8 @@ pub struct AliasAccount {
     pub username: String,
     pub project_suffix: String,
     pub chain_mappings: Vec<ChainMapping>,
+    pub reputation: i64,
+    pub reputation_updated_at: i64,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
@@ -30,10 +32,4 @@ pub struct ChainMapping {
 pub enum ChainType {
     SVM,
     EVM,
-}
-#[account]
-pub struct ReputationAccount {
-    pub alias: String,
-    pub score: i64,
-    pub last_update: i64,
 }

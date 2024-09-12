@@ -1,34 +1,30 @@
 use anchor_lang::prelude::*;
-use crate::{error::EchoIDError, state::{AliasAccount, ReputationAccount}};
+use crate::state::{AliasAccount, AdminConfig};
 
 #[derive(Accounts)]
-#[instruction(username: String, project_suffix: String, change: i64)]
+#[instruction(username: String, project_suffix: String, reputation_change: i64)]
 pub struct UpdateReputation<'info> {
-    #[account(mut)]
-    pub updater: Signer<'info>,
     #[account(
-        seeds = [username.as_bytes(), b"@", project_suffix.as_bytes()],
+        seeds = [b"admin"],
         bump,
-        constraint = alias_account.username == username && alias_account.project_suffix == project_suffix @ EchoIDError::InvalidAlias
+        constraint = admin_config.admin == admin.key()
     )]
-    pub alias_account: Account<'info, AliasAccount>,
+    pub admin_config: Account<'info, AdminConfig>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"reputation", username.as_bytes(), b"@", project_suffix.as_bytes()],
-        bump
+        seeds = [username.as_bytes(), b"@", project_suffix.as_bytes()],
+        bump,
     )]
-    pub reputation_account: Account<'info, ReputationAccount>,
+    pub alias_account: Account<'info, AliasAccount>,
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<UpdateReputation>, username: String, project_suffix: String, change: i64) -> Result<()> {
-    let reputation_account = &mut ctx.accounts.reputation_account;
-    let alias = format!("{}@{}", username, project_suffix);
-
-    require!(reputation_account.alias == alias, EchoIDError::InvalidAlias);
-
-    reputation_account.score = reputation_account.score.saturating_add(change);
-    reputation_account.last_update = Clock::get()?.unix_timestamp;
-
+pub fn handler(ctx: Context<UpdateReputation>, username: String, project_suffix: String, reputation_change: i64) -> Result<()> {
+    let alias_account = &mut ctx.accounts.alias_account;
+    let clock = Clock::get()?;
+    alias_account.reputation = alias_account.reputation.saturating_add(reputation_change);
+    alias_account.reputation_updated_at = clock.unix_timestamp;
     Ok(())
 }

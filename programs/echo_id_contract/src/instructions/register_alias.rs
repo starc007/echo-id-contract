@@ -19,7 +19,14 @@ pub struct RegisterAlias<'info> {
     #[account(
         init,
         payer = owner,
-        space = 8 + 32 + 4 + params.username.len() + 4 + params.project_suffix.len() + 32 + 4 + 32 + 1 + 4 + params.address.len(),
+        space = 8 + // discriminator
+                32 + // owner
+                4 + params.username.len() + // username
+                4 + params.project_suffix.len() + // project_suffix
+                4 + (10 * (1 + 4 + 32)) + // space for up to 10 chain mappings
+                8 + // reputation_score
+                8, // last_reputation_update
+
         seeds = [params.username.as_bytes(), b"@", params.project_suffix.as_bytes()],
         bump,
     )]
@@ -53,6 +60,10 @@ pub fn handler(ctx: Context<RegisterAlias>, params:RegisterAliasParams) -> Resul
         address: params.address,
         chain_id: params.chain_id,
     }];
+
+    //initialize reputation
+    alias_account.reputation = 10;
+    alias_account.reputation_updated_at = Clock::get()?.unix_timestamp;
 
     Ok(())
 }
