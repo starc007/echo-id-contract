@@ -19,9 +19,9 @@ pub struct RegisterAlias<'info> {
     #[account(
         init,
         payer = owner,
-        space = 8 + 32 + 4 + params.username.len() + 4 + params.project_suffix.len() + 32 + 4 + 32 + 1 + 32,
+        space = 8 + 32 + 4 + params.username.len() + 4 + params.project_suffix.len() + 32 + 4 + 32 + 1 + 4 + params.address.len(),
         seeds = [params.username.as_bytes(), b"@", params.project_suffix.as_bytes()],
-        bump
+        bump,
     )]
     pub alias_account: Account<'info, AliasAccount>,
     #[account(
@@ -41,7 +41,6 @@ pub fn handler(ctx: Context<RegisterAlias>, params:RegisterAliasParams) -> Resul
     alias_account.username = params.username;
     alias_account.project_suffix = params.project_suffix;
     alias_account.owner = *ctx.accounts.owner.key;
-    alias_account.chain_id = params.chain_id;
     
     let chain_type = match params.chain_type.as_str() {
         "svm" => ChainType::SVM,
@@ -52,6 +51,7 @@ pub fn handler(ctx: Context<RegisterAlias>, params:RegisterAliasParams) -> Resul
     alias_account.chain_mappings = vec![ChainMapping {
         chain_type,
         address: params.address,
+        chain_id: params.chain_id,
     }];
 
     Ok(())

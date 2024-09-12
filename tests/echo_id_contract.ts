@@ -25,6 +25,8 @@ describe("echo_id_contract", () => {
   let adminKeypair: Keypair;
   let projectSuffixPda: PublicKey;
   const projectSuffix = "myapp";
+  // Store the alias owner keypair
+  let aliasOwnerKeypair: Keypair;
 
   before(async () => {
     console.log("Setting up test environment...");
@@ -103,9 +105,9 @@ describe("echo_id_contract", () => {
     console.log("Starting alias registration test...");
 
     const username = "alice";
-    const chainType = "svm";
+    const chainType = "evm";
     const chainId = 1;
-    const address = "SoLAn5AdDresS1111111111111111111111111111"; // Example Solana address
+    const address = "OxAddReSs";
 
     const [aliasPda] = PublicKey.findProgramAddressSync(
       [Buffer.from(username), Buffer.from("@"), Buffer.from(projectSuffix)],
@@ -113,8 +115,11 @@ describe("echo_id_contract", () => {
     );
     console.log("Alias PDA:", aliasPda.toBase58());
 
-    const aliasOwner = await createAndFundKeypair();
-    console.log("Alias Owner public key:", aliasOwner.publicKey.toBase58());
+    aliasOwnerKeypair = await createAndFundKeypair();
+    console.log(
+      "Alias Owner public key:",
+      aliasOwnerKeypair.publicKey.toBase58()
+    );
 
     try {
       const tx = await program.methods
@@ -126,12 +131,12 @@ describe("echo_id_contract", () => {
           address,
         })
         .accounts({
-          owner: aliasOwner.publicKey,
+          owner: aliasOwnerKeypair.publicKey,
           aliasAccount: aliasPda,
           projectSuffixAccount: projectSuffixPda,
           systemProgram: SystemProgram.programId,
         })
-        .signers([aliasOwner])
+        .signers([aliasOwnerKeypair])
         .rpc();
       console.log("Transaction signature:", tx);
 
@@ -139,12 +144,12 @@ describe("echo_id_contract", () => {
       console.log("Alias account fetched:", aliasAccount);
 
       expect(aliasAccount.owner.toBase58()).to.equal(
-        aliasOwner.publicKey.toBase58()
+        aliasOwnerKeypair.publicKey.toBase58()
       );
       expect(aliasAccount.username).to.equal(username);
       expect(aliasAccount.projectSuffix).to.equal(projectSuffix);
-      expect(aliasAccount.chainId).to.equal(chainId);
-      expect(aliasAccount.chainMappings[0].chainType.svm).to.not.be.undefined;
+      expect(aliasAccount.chainMappings[0].chainId).to.equal(chainId);
+      expect(aliasAccount.chainMappings[0].chainType.evm).to.not.be.undefined;
       expect(aliasAccount.chainMappings[0].address).to.equal(address);
       console.log("Alias registered successfully");
     } catch (error) {
@@ -190,6 +195,53 @@ describe("echo_id_contract", () => {
     } catch (error) {
       console.log("Error caught as expected:", error.message);
       expect(error.message).to.include("EmptyAddress");
+    }
+  });
+
+  it("Adds an SVM address to an existing alias", async () => {
+    console.log("Starting test for adding SVM address to existing alias...");
+
+    const username = "alice"; // Use the same username as in the initial registration
+    const chainType = "svm";
+    const chainId = 1;
+    const svmAddress = "SoLAddReSs111111111111111111111111111111";
+
+    const [aliasPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from(username), Buffer.from("@"), Buffer.from(projectSuffix)],
+      program.programId
+    );
+
+    try {
+      const tx = await program.methods
+        .addChainMapping({
+          chainType,
+          chainId,
+          address: svmAddress,
+        })
+        .accounts({
+          owner: aliasOwnerKeypair.publicKey,
+          aliasAccount: aliasPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([aliasOwnerKeypair])
+        .rpc();
+
+      console.log("Transaction signature:", tx);
+
+      const updatedAliasAccount = await program.account.aliasAccount.fetch(
+        aliasPda
+      );
+      console.log("Updated Alias account fetched:", updatedAliasAccount);
+
+      expect(updatedAliasAccount.chainMappings).to.have.lengthOf(2);
+      expect(updatedAliasAccount.chainMappings[1].chainType.svm).to.not.be
+        .undefined;
+      expect(updatedAliasAccount.chainMappings[1].chainId).to.equal(chainId);
+      expect(updatedAliasAccount.chainMappings[1].address).to.equal(svmAddress);
+      console.log("SVM address added successfully to existing alias");
+    } catch (error) {
+      console.error("Error adding SVM address:", error);
+      throw error;
     }
   });
 });

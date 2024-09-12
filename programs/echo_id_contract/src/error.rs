@@ -56,4 +56,7 @@ pub enum EchoIDError {
 
     #[msg("Address cannot be empty")]
     EmptyAddress,
+    
+    #[msg("Chain mapping already exists for this chain type")]
+    ChainMappingAlreadyExists,
 }

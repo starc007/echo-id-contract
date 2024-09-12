@@ -16,14 +16,14 @@ pub struct AliasAccount {
     pub owner: Pubkey,
     pub username: String,
     pub project_suffix: String,
-    pub chain_id: u32,
     pub chain_mappings: Vec<ChainMapping>,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
 pub struct ChainMapping {
     pub chain_type: ChainType,
-    pub address: String,  // Using a fixed-size array for the address
+    pub address: String, 
+    pub chain_id: u32,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]

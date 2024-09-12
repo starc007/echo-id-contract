@@ -24,6 +24,9 @@ pub mod echo_id_contract {
         instructions::register_alias::handler(ctx, params)
     }
 
+     pub fn add_chain_mapping(ctx: Context<AddChainMapping>, params: add_chain_mapping::AddChainMappingParams) -> Result<()> {
+        instructions::add_chain_mapping::handler(ctx, params)
+    }
 
     pub fn initialize_reputation(ctx: Context<InitializeReputation>, username: String, project_suffix: String) -> Result<()> {
         instructions::initialize_reputation::handler(ctx, username, project_suffix)
