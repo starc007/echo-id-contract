@@ -767,6 +767,10 @@ name = "echo_id_contract"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "curve25519-dalek",
+ "rand 0.7.3",
+ "rand_core 0.5.1",
+ "sha2 0.9.9",
 ]
 
 [[package]]

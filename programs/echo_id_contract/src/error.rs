@@ -59,4 +59,16 @@ pub enum EchoIDError {
     
     #[msg("Chain mapping already exists for this chain type")]
     ChainMappingAlreadyExists,
+
+    #[msg("Invalid chain mapping")]
+    InvalidChainMapping,
+
+    #[msg("Invalid proof")]
+    InvalidProof,
+
+    #[msg("Invalid public key")]
+    InvalidPublicKey,
+
+    #[msg("Invalid Merkle proof")]
+    InvalidMerkleProof
 }

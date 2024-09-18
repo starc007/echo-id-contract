@@ -1,11 +1,16 @@
 use anchor_lang::prelude::*;
-use crate::{error::EchoIDError, state::{AliasAccount, ChainMapping, ChainType}};
+use crate::{
+    error::EchoIDError as ErrorCode,
+    state::{AliasAccount, ChainMapping},
+    zkp,
+    merkle,
+};
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct AddChainMappingParams {
-    pub chain_type: String,
-    pub chain_id: u32,
-    pub address: String,
+    pub new_mapping: ChainMapping,
+    pub merkle_proof: Vec<[u8; 32]>,
+    pub zk_proof: zkp::SerializableProof,
 }
 
 #[derive(Accounts)]
@@ -24,26 +29,39 @@ pub struct AddChainMapping<'info> {
 }
 
 pub fn handler(ctx: Context<AddChainMapping>, params: AddChainMappingParams) -> Result<()> {
-    require!(!params.address.is_empty(), EchoIDError::EmptyAddress);
+        let alias_account = &mut ctx.accounts.alias_account;
     
-    let alias_account = &mut ctx.accounts.alias_account;
+    // Verify the ZK proof
+     let public_key = zkp::PublicKey::from_bytes(&alias_account.zk_public_key)
+        .ok_or(ErrorCode::InvalidPublicKey)?;
     
-    let chain_type = match params.chain_type.as_str() {
-        "svm" => ChainType::SVM,
-        "evm" => ChainType::EVM,
-        _ => return Err(EchoIDError::InvalidChainType.into()),
-    };
+    let message = merkle::hash_chain_mapping(&params.new_mapping);
+    let proof = params.zk_proof.into_proof().ok_or(ErrorCode::InvalidProof)?;
     
-    // Check if this chain type already exists
-    if alias_account.chain_mappings.iter().any(|mapping| mapping.chain_type == chain_type) {
-        return Err(EchoIDError::ChainMappingAlreadyExists.into());
+    require!(
+        zkp::verify(&public_key, &message, &proof),
+        ErrorCode::InvalidProof
+    );
+
+    
+    // Verify the Merkle proof
+    let new_leaf = merkle::hash_chain_mapping(&params.new_mapping);
+    let old_root = alias_account.chain_mappings_root;
+    require!(
+        merkle::verify_merkle_proof(old_root, new_leaf, &params.merkle_proof),
+        ErrorCode::InvalidMerkleProof
+    );
+    
+    // Compute the new Merkle root
+    let mut leaves = vec![new_leaf];
+    for &proof_element in params.merkle_proof.iter().rev() {
+        leaves.push(proof_element);
     }
+    let new_root = merkle::compute_merkle_root(&leaves);
     
-    alias_account.chain_mappings.push(ChainMapping {
-        chain_type,
-        chain_id: params.chain_id,
-        address: params.address,
-    });
+    // Update the alias account
+    alias_account.chain_mappings_root = new_root;
+    alias_account.chain_mapping_count += 1;
 
     Ok(())
 }
