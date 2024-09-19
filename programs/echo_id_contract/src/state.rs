@@ -21,7 +21,7 @@ pub struct AliasAccount {
     pub chain_mapping_count: u32,
     pub reputation: i64,
     pub reputation_updated_at: i64,
-    pub zk_public_key: [u8; 32],
+    pub public_key: [u8; 32], // Ed25519 public key
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]

@@ -1,12 +1,11 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::log::sol_log;
 
-use crate::{error::EchoIDError as ErrorCode, state::*, zkp, merkle};
+use crate::{error::EchoIDError as ErrorCode, state::*, merkle};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct RegisterAliasParams {
     pub username: String,
-    pub zk_public_key: [u8; 32],
+    pub public_key: [u8; 32],
     pub initial_chain_mapping: ChainMapping,
 }
 
@@ -42,23 +41,8 @@ pub fn handler(ctx: Context<RegisterAlias>, params: RegisterAliasParams) -> Resu
     alias_account.owner = *ctx.accounts.product_owner.key;
     alias_account.username = params.username;
     alias_account.product_suffix = product_owner_account.suffix.clone();
+    alias_account.public_key = params.public_key;
 
-    // Debug log
-    sol_log(&format!("Received ZK public key: {:?}", params.zk_public_key));
-
-
- // Verify that the provided public key is valid
-    match zkp::PublicKey::from_bytes(&params.zk_public_key) {
-        Some(_) => {
-            sol_log("ZK public key is valid");
-            alias_account.zk_public_key = params.zk_public_key;
-        },
-        None => {
-            sol_log("ZK public key is invalid");
-            return Err(ErrorCode::InvalidPublicKey.into());
-        }
-    }
-    alias_account.zk_public_key = params.zk_public_key;
     
     let leaf = merkle::hash_chain_mapping(&params.initial_chain_mapping);
     alias_account.chain_mappings_root = merkle::compute_merkle_root(&[leaf]);

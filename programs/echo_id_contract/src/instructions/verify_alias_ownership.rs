@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
+use crate::signature;
 use crate::{
     error::EchoIDError as ErrorCode,
     state::{AliasAccount, ProductOwner},
-    zkp::{self, SerializableProof},
 };
 
 #[derive(Accounts)]
@@ -24,15 +24,9 @@ pub struct VerifyAliasOwnership<'info> {
     pub alias_account: Account<'info, AliasAccount>,
 }
 
-pub fn handler(ctx: Context<VerifyAliasOwnership>, proof: SerializableProof) -> Result<()> {
+pub fn handler(ctx: Context<VerifyAliasOwnership>, signature: [u8; 64]) -> Result<()> {
     let alias_account = &ctx.accounts.alias_account;
     
-    // Convert the stored public key bytes to a PublicKey
-    let public_key = zkp::PublicKey::from_bytes(&alias_account.zk_public_key)
-        .ok_or(ErrorCode::InvalidPublicKey)?;
-
-    // Convert SerializableProof to Proof
-    let zkp_proof = proof.into_proof().ok_or(ErrorCode::InvalidProof)?;
 
     // The message to be verified is the concatenation of the username and product suffix
     let message = [
@@ -41,10 +35,9 @@ pub fn handler(ctx: Context<VerifyAliasOwnership>, proof: SerializableProof) -> 
         alias_account.product_suffix.as_bytes()
     ].concat();
 
-    // Verify the ZK proof
     require!(
-        zkp::verify(&public_key, &message, &zkp_proof),
-        ErrorCode::InvalidProof
+        signature::verify_signature(&alias_account.public_key, &message, &signature),
+        ErrorCode::InvalidSignature
     );
 
     // If we've reached this point, the proof is valid

@@ -80,8 +80,10 @@ pub enum EchoIDError {
 
     #[msg("Suffix already exists")]
     SuffixAlreadyExists,
-    
+
     #[msg("Product owner is not active")]
     ProductOwnerNotActive,
 
+    #[msg("Invalid signature")]
+    InvalidSignature,
 }

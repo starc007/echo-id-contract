@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 pub mod state;
 pub mod error;
 pub mod instructions;
-pub mod zkp;
+pub mod signature;
 pub mod merkle;
 
 use instructions::*;
@@ -34,7 +34,7 @@ pub mod echo_id_contract {
         instructions::update_reputation::handler(ctx, username, project_suffix, change)
     }
 
-    pub fn verify_alias_ownership(ctx: Context<VerifyAliasOwnership>, proof: zkp::SerializableProof) -> Result<()> {
-        instructions::verify_alias_ownership::handler(ctx, proof)
+    pub fn verify_alias_ownership(ctx: Context<VerifyAliasOwnership>, signature: [u8; 64]) -> Result<()> {
+        instructions::verify_alias_ownership::handler(ctx, signature)
     }
 }
