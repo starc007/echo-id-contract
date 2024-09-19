@@ -44,27 +44,18 @@ pub fn handler(ctx: Context<AddChainMapping>, params: AddChainMappingParams) -> 
     
     let message = merkle::hash_chain_mapping(&params.new_mapping);
     let proof = params.zk_proof.into_proof().ok_or(ErrorCode::InvalidProof)?;
-    
     require!(
         zkp::verify(&public_key, &message, &proof),
         ErrorCode::InvalidProof
     );
     
-    // Verify the Merkle proof
-    let new_leaf = merkle::hash_chain_mapping(&params.new_mapping);
-    let old_root = alias_account.chain_mappings_root;
-    require!(
-        merkle::verify_merkle_proof(old_root, new_leaf, &params.merkle_proof),
-        ErrorCode::InvalidMerkleProof
+    // Verify the Merkle proof and compute new root in one pass
+    let (is_valid, new_root) = merkle::verify_and_update(
+        alias_account.chain_mappings_root,
+        merkle::hash_chain_mapping(&params.new_mapping),
+        &params.merkle_proof
     );
-    
-    // Compute the new Merkle root
-    let mut leaves = vec![new_leaf];
-    for &proof_element in params.merkle_proof.iter().rev() {
-        leaves.push(proof_element);
-    }
-    let new_root = merkle::compute_merkle_root(&leaves);
-    
+    require!(is_valid, ErrorCode::InvalidMerkleProof);
     // Update the alias account
     alias_account.chain_mappings_root = new_root;
     alias_account.chain_mapping_count += 1;

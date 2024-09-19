@@ -18,14 +18,9 @@ pub mod echo_id_contract {
         instructions::initialize::handler(ctx)
     }
 
-    pub fn add_product_owner(ctx: Context<AddProductOwner>) -> Result<()> {
-        instructions::add_product_owner::handler(ctx)
+    pub fn register_product_owner(ctx: Context<RegisterProductOwner>, suffix: String) -> Result<()> {
+        instructions::register_product_owner::handler(ctx, suffix)
     }
-
-    pub fn create_suffix(ctx: Context<CreateSuffix>, suffix: String) -> Result<()> {
-        instructions::create_suffix::handler(ctx, suffix)
-    }
-
 
     pub fn register_alias(ctx: Context<RegisterAlias>, params: register_alias::RegisterAliasParams) -> Result<()> {
         instructions::register_alias::handler(ctx, params)

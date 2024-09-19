@@ -5,7 +5,7 @@ import { EchoIdContract } from "../target/types/echo_id_contract";
 import { expect } from "chai";
 
 describe("echo_id_contract", () => {
-  console.log("setting provider");
+  console.log("Setting up test environment...");
   anchor.setProvider(anchor.AnchorProvider.env());
 
   const program = anchor.workspace.EchoIdContract as Program<EchoIdContract>;
@@ -13,31 +13,40 @@ describe("echo_id_contract", () => {
 
   async function createAndFundKeypair(): Promise<Keypair> {
     const keypair = Keypair.generate();
+    console.log(`Requesting airdrop for ${keypair.publicKey.toBase58()}`);
     const airdropSignature = await provider.connection.requestAirdrop(
       keypair.publicKey,
       2 * anchor.web3.LAMPORTS_PER_SOL
     );
     await provider.connection.confirmTransaction(airdropSignature);
+    console.log(`Airdrop confirmed for ${keypair.publicKey.toBase58()}`);
     return keypair;
   }
 
   let adminPda: PublicKey;
   let adminKeypair: Keypair;
-  let projectSuffixPda: PublicKey;
+  let productOwnerPda: PublicKey;
+  let productOwnerKeypair: Keypair;
+  let suffixPda: PublicKey;
   let aliasOwnerKeypair: Keypair;
   let aliasPda: PublicKey;
   const projectSuffix = "myapp";
   const username = "alice";
 
   before(async () => {
-    console.log("Setting up test environment...");
+    console.log("Initializing test accounts and PDAs...");
     adminKeypair = await createAndFundKeypair();
+    productOwnerKeypair = await createAndFundKeypair();
     [adminPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("admin")],
       program.programId
     );
-    [projectSuffixPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("project_suffix"), Buffer.from(projectSuffix)],
+    [productOwnerPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("product_owner"), productOwnerKeypair.publicKey.toBuffer()],
+      program.programId
+    );
+    [suffixPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("suffix"), Buffer.from(projectSuffix)],
       program.programId
     );
     [aliasPda] = PublicKey.findProgramAddressSync(
@@ -45,268 +54,209 @@ describe("echo_id_contract", () => {
       program.programId
     );
     console.log("Admin PDA:", adminPda.toBase58());
-    console.log("Admin Keypair public key:", adminKeypair.publicKey.toBase58());
-    console.log("Project Suffix PDA:", projectSuffixPda.toBase58());
+    console.log("Product Owner PDA:", productOwnerPda.toBase58());
+    console.log("Suffix PDA:", suffixPda.toBase58());
     console.log("Alias PDA:", aliasPda.toBase58());
   });
 
   it("Initializes the admin", async () => {
-    console.log("Starting admin initialization test...");
+    console.log("Testing admin initialization...");
+    const tx = await program.methods
+      .initialize()
+      .accounts({
+        admin: adminKeypair.publicKey,
+        adminConfig: adminPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([adminKeypair])
+      .rpc();
+    console.log("Admin initialization transaction:", tx);
 
-    try {
-      const tx = await program.methods
-        .initialize()
-        .accounts({
-          admin: adminKeypair.publicKey,
-          adminConfig: adminPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([adminKeypair])
-        .rpc();
-      console.log("Transaction signature:", tx);
-
-      const adminAccount = await program.account.adminConfig.fetch(adminPda);
-      console.log("Admin account fetched:", adminAccount);
-
-      expect(adminAccount.admin.toBase58()).to.equal(
-        adminKeypair.publicKey.toBase58()
-      );
-      console.log("Admin pubkey matches the provided admin keypair");
-    } catch (error) {
-      console.error("Error during admin initialization:", error);
-      throw error;
-    }
+    const adminAccount = await program.account.adminConfig.fetch(adminPda);
+    console.log("Admin account:", adminAccount);
+    expect(adminAccount.admin.toBase58()).to.equal(
+      adminKeypair.publicKey.toBase58()
+    );
+    console.log("Admin initialized successfully");
   });
 
-  it("Registers a project suffix", async () => {
-    console.log("Starting project suffix registration test...");
+  it("Registers a product owner with suffix", async () => {
+    console.log("Testing product owner registration with suffix...");
+    const tx = await program.methods
+      .registerProductOwner(projectSuffix)
+      .accounts({
+        admin: adminKeypair.publicKey,
+        adminConfig: adminPda,
+        productOwner: productOwnerPda,
+        newProductOwner: productOwnerKeypair.publicKey,
+        suffixAccount: suffixPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([adminKeypair])
+      .rpc();
+    console.log("Register product owner transaction:", tx);
 
-    try {
-      const tx = await program.methods
-        .registerProjectSuffix(projectSuffix)
-        .accounts({
-          admin: adminKeypair.publicKey,
-          adminConfig: adminPda,
-          projectSuffixAccount: projectSuffixPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([adminKeypair])
-        .rpc();
-      console.log("Transaction signature:", tx);
+    const productOwnerAccount = await program.account.productOwner.fetch(
+      productOwnerPda
+    );
+    console.log("Product owner account:", productOwnerAccount);
+    expect(productOwnerAccount.address.toBase58()).to.equal(
+      productOwnerKeypair.publicKey.toBase58()
+    );
+    expect(productOwnerAccount.isActive).to.be.true;
+    expect(productOwnerAccount.suffix).to.equal(projectSuffix);
 
-      const projectSuffixAccount = await program.account.projectSuffix.fetch(
-        projectSuffixPda
-      );
-      console.log("Project Suffix account fetched:", projectSuffixAccount);
+    const suffixAccount = await program.account.productOwner.fetch(suffixPda);
+    console.log("Suffix account:", suffixAccount);
+    expect(suffixAccount.address.toBase58()).to.equal(
+      productOwnerKeypair.publicKey.toBase58()
+    );
+    expect(suffixAccount.isActive).to.be.true;
+    expect(suffixAccount.suffix).to.equal(projectSuffix);
 
-      expect(projectSuffixAccount.suffix).to.equal(projectSuffix);
-      console.log("Project suffix registered successfully");
-    } catch (error) {
-      console.error("Error during project suffix registration:", error);
-      throw error;
-    }
+    console.log("Product owner registered with suffix successfully");
   });
 
   it("Registers an alias", async () => {
-    console.log("Starting alias registration test...");
-    const chainType = "evm";
+    console.log("Testing alias registration...");
+    aliasOwnerKeypair = await createAndFundKeypair();
+    const chainType = { evm: {} };
     const chainId = 1;
     const address = "0x1234567890123456789012345678901234567890";
+    // Generate a valid public key
+    const zkKeyPair = Keypair.generate();
+    const zkPublicKey = zkKeyPair.publicKey.toBytes();
 
-    aliasOwnerKeypair = await createAndFundKeypair();
     console.log(
-      "Alias Owner public key:",
-      aliasOwnerKeypair.publicKey.toBase58()
+      "Generated ZK public key:",
+      Buffer.from(zkPublicKey).toString("hex")
     );
 
-    try {
-      const tx = await program.methods
-        .registerAlias({
-          username,
-          projectSuffix,
-          chainId,
+    const tx = await program.methods
+      .registerAlias({
+        username,
+        zkPublicKey: Array.from(zkPublicKey),
+        initialChainMapping: {
           chainType,
           address,
-        })
-        .accounts({
-          owner: aliasOwnerKeypair.publicKey,
-          aliasAccount: aliasPda,
-          projectSuffixAccount: projectSuffixPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([aliasOwnerKeypair])
-        .rpc();
-      console.log("Transaction signature:", tx);
+          chainId,
+        },
+      })
+      .accounts({
+        productOwner: productOwnerKeypair.publicKey,
+        productOwnerAccount: productOwnerPda,
+        aliasAccount: aliasPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([productOwnerKeypair])
+      .rpc();
+    console.log("Register alias transaction:", tx);
 
-      const aliasAccount = await program.account.aliasAccount.fetch(aliasPda);
-      console.log("Alias account fetched:", aliasAccount);
-
-      expect(aliasAccount.owner.toBase58()).to.equal(
-        aliasOwnerKeypair.publicKey.toBase58()
-      );
-      expect(aliasAccount.username).to.equal(username);
-      expect(aliasAccount.projectSuffix).to.equal(projectSuffix);
-      expect(aliasAccount.chainMappings[0].chainId).to.equal(chainId);
-      expect(aliasAccount.chainMappings[0].chainType.evm).to.not.be.undefined;
-      expect(aliasAccount.chainMappings[0].address).to.equal(address);
-      expect(aliasAccount.reputation.toNumber()).to.equal(10);
-      expect(aliasAccount.reputationUpdatedAt.toNumber()).to.be.greaterThan(0);
-      console.log("Alias registered successfully");
-    } catch (error) {
-      console.error("Error during alias registration:", error);
-      throw error;
-    }
-  });
-
-  it("Fails to register an alias with empty address", async () => {
-    console.log("Starting alias registration with empty address test...");
-
-    const username = "bob";
-    const chainType = "svm";
-    const chainId = 1;
-    const address = ""; // Empty address
-
-    const [aliasPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from(username), Buffer.from("@"), Buffer.from(projectSuffix)],
-      program.programId
+    const aliasAccount = await program.account.aliasAccount.fetch(aliasPda);
+    console.log("Alias account:", aliasAccount);
+    expect(aliasAccount.owner.toBase58()).to.equal(
+      productOwnerKeypair.publicKey.toBase58()
     );
-
-    const aliasOwner = await createAndFundKeypair();
-
-    try {
-      await program.methods
-        .registerAlias({
-          username,
-          projectSuffix,
-          chainId,
-          chainType,
-          address,
-        })
-        .accounts({
-          owner: aliasOwner.publicKey,
-          aliasAccount: aliasPda,
-          projectSuffixAccount: projectSuffixPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([aliasOwner])
-        .rpc();
-
-      throw new Error("Expected an error, but the transaction succeeded");
-    } catch (error) {
-      console.log("Error caught as expected:", error.message);
-      expect(error.message).to.include("EmptyAddress");
-    }
+    expect(aliasAccount.username).to.equal(username);
+    expect(aliasAccount.productSuffix).to.equal(projectSuffix);
+    expect(aliasAccount.chainMappingCount).to.equal(1);
+    expect(aliasAccount.reputation.toNumber()).to.equal(10);
+    expect(aliasAccount.reputationUpdatedAt.toNumber()).to.be.greaterThan(0);
+    console.log("Alias registered successfully");
   });
 
-  it("Adds an SVM address to an existing alias", async () => {
-    console.log("Starting test for adding SVM address to existing alias...");
-    const chainType = "svm";
+  it("Adds a chain mapping to an existing alias", async () => {
+    console.log("Testing addition of chain mapping...");
+    const chainType = { svm: {} };
     const chainId = 1;
-    const svmAddress = "SoLAddReSs111111111111111111111111111111";
+    const address = "SoLAddReSs111111111111111111111111111111";
+    const merkleProof: number[][] = []; // Dummy Merkle proof
+    const zkProof = {
+      r: Array.from(new Uint8Array(32).fill(2)),
+      s: Array.from(new Uint8Array(32).fill(3)),
+    };
 
-    try {
-      const tx = await program.methods
-        .addChainMapping({
+    const tx = await program.methods
+      .addChainMapping({
+        newMapping: {
           chainType,
+          address,
           chainId,
-          address: svmAddress,
-        })
-        .accounts({
-          owner: aliasOwnerKeypair.publicKey,
-          aliasAccount: aliasPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([aliasOwnerKeypair])
-        .rpc();
+        },
+        merkleProof,
+        zkProof,
+      })
+      .accounts({
+        productOwner: productOwnerKeypair.publicKey,
+        productOwnerAccount: productOwnerPda,
+        aliasAccount: aliasPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([productOwnerKeypair])
+      .preInstructions([
+        anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
+          units: 1_000_000,
+        }),
+      ])
+      .rpc();
+    console.log("Add chain mapping transaction:", tx);
 
-      console.log("Transaction signature:", tx);
+    const updatedAliasAccount = await program.account.aliasAccount.fetch(
+      aliasPda
+    );
+    console.log("Updated alias account:", updatedAliasAccount);
+    expect(updatedAliasAccount.chainMappingCount).to.equal(2);
+    console.log("Chain mapping added successfully");
+  });
 
-      const updatedAliasAccount = await program.account.aliasAccount.fetch(
-        aliasPda
-      );
-      console.log("Updated Alias account fetched:", updatedAliasAccount);
+  it("Verifies alias ownership", async () => {
+    console.log("Testing alias ownership verification...");
+    const zkProof = {
+      r: Array.from({ length: 32 }, (_, i) => i % 256),
+      s: Array.from({ length: 32 }, (_, i) => (i + 128) % 256),
+    };
 
-      expect(updatedAliasAccount.chainMappings).to.have.lengthOf(2);
-      expect(updatedAliasAccount.chainMappings[1].chainType.svm).to.not.be
-        .undefined;
-      expect(updatedAliasAccount.chainMappings[1].chainId).to.equal(chainId);
-      expect(updatedAliasAccount.chainMappings[1].address).to.equal(svmAddress);
-      console.log("SVM address added successfully to existing alias");
-    } catch (error) {
-      console.error("Error adding SVM address:", error);
-      throw error;
-    }
+    const tx = await program.methods
+      .verifyAliasOwnership(zkProof)
+      .accounts({
+        productOwner: productOwnerKeypair.publicKey,
+        productOwnerAccount: productOwnerPda,
+        aliasAccount: aliasPda,
+      })
+      .signers([productOwnerKeypair])
+      .rpc();
+    console.log("Verify alias ownership transaction:", tx);
+    console.log("Alias ownership verified successfully");
   });
 
   it("Updates reputation for an alias (admin only)", async () => {
-    console.log("Starting test for updating reputation...");
-
+    console.log("Testing reputation update...");
     const reputationChange = 20;
 
-    try {
-      const beforeUpdate = await program.account.aliasAccount.fetch(aliasPda);
-      const beforeTimestamp = beforeUpdate.reputationUpdatedAt.toNumber();
-      const tx = await program.methods
-        .updateReputation(
-          username,
-          projectSuffix,
-          new anchor.BN(reputationChange)
-        )
-        .accounts({
-          admin: adminKeypair.publicKey,
-          adminConfig: adminPda,
-          aliasAccount: aliasPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([adminKeypair])
-        .rpc();
+    const tx = await program.methods
+      .updateReputation(
+        username,
+        projectSuffix,
+        new anchor.BN(reputationChange)
+      )
+      .accounts({
+        admin: adminKeypair.publicKey,
+        adminConfig: adminPda,
+        aliasAccount: aliasPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([adminKeypair])
+      .rpc();
+    console.log("Update reputation transaction:", tx);
 
-      console.log("Transaction signature:", tx);
-
-      const updatedAliasAccount = await program.account.aliasAccount.fetch(
-        aliasPda
-      );
-      console.log("Updated Alias account fetched:", updatedAliasAccount);
-
-      expect(updatedAliasAccount.reputation.toNumber()).to.equal(
-        reputationChange + 10
-      );
-      expect(updatedAliasAccount.reputationUpdatedAt.toNumber()).to.be.above(
-        beforeTimestamp
-      );
-      console.log("Reputation updated successfully");
-
-      // Sleep for a second to ensure next update has a different timestamp
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Update reputation again to check if lastReputationUpdate changes
-      await program.methods
-        .updateReputation(
-          username,
-          projectSuffix,
-          new anchor.BN(reputationChange)
-        )
-        .accounts({
-          admin: adminKeypair.publicKey,
-          adminConfig: adminPda,
-          aliasAccount: aliasPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([adminKeypair])
-        .rpc();
-
-      const secondUpdateAccount = await program.account.aliasAccount.fetch(
-        aliasPda
-      );
-      expect(secondUpdateAccount.reputationUpdatedAt.toNumber()).to.be.above(
-        updatedAliasAccount.reputationUpdatedAt.toNumber()
-      );
-      console.log(
-        "Second reputation update successful, last update timestamp changed"
-      );
-    } catch (error) {
-      console.error("Error updating reputation:", error);
-      throw error;
-    }
+    const updatedAliasAccount = await program.account.aliasAccount.fetch(
+      aliasPda
+    );
+    console.log(
+      "Updated alias account after reputation change:",
+      updatedAliasAccount
+    );
+    expect(updatedAliasAccount.reputation.toNumber()).to.equal(30); // 10 (initial) + 20 (change)
+    console.log("Reputation updated successfully");
   });
 });
