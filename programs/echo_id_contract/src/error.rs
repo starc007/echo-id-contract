@@ -70,5 +70,18 @@ pub enum EchoIDError {
     InvalidPublicKey,
 
     #[msg("Invalid Merkle proof")]
-    InvalidMerkleProof
+    InvalidMerkleProof,
+
+    #[msg("Product owner already exists")]
+    ProductOwnerAlreadyExists,
+
+    #[msg("Product owner not found")]
+    ProductOwnerNotFound,
+
+    #[msg("Suffix already exists")]
+    SuffixAlreadyExists,
+    
+    #[msg("Product owner is not active")]
+    ProductOwnerNotActive,
+
 }

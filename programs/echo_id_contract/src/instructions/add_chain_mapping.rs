@@ -1,12 +1,12 @@
 use anchor_lang::prelude::*;
 use crate::{
     error::EchoIDError as ErrorCode,
-    state::{AliasAccount, ChainMapping},
+    state::{AliasAccount, ChainMapping, ProductOwner},
     zkp,
     merkle,
 };
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct AddChainMappingParams {
     pub new_mapping: ChainMapping,
     pub merkle_proof: Vec<[u8; 32]>,
@@ -17,22 +17,29 @@ pub struct AddChainMappingParams {
 #[instruction(params: AddChainMappingParams)]
 pub struct AddChainMapping<'info> {
     #[account(mut)]
-    pub owner: Signer<'info>,
+    pub product_owner: Signer<'info>,
+    #[account(
+        seeds = [b"product_owner", product_owner.key().as_ref()],
+        bump,
+        constraint = product_owner_account.address == product_owner.key() @ ErrorCode::Unauthorized,
+        constraint = product_owner_account.is_active @ ErrorCode::ProductOwnerNotActive
+    )]
+    pub product_owner_account: Account<'info, ProductOwner>,
     #[account(
         mut,
-        seeds = [alias_account.username.as_bytes(), b"@", alias_account.project_suffix.as_bytes()],
+        seeds = [alias_account.username.as_bytes(), b"@", alias_account.product_suffix.as_bytes()],
         bump,
-        has_one = owner,
+        constraint = alias_account.owner == product_owner.key() @ ErrorCode::Unauthorized
     )]
     pub alias_account: Account<'info, AliasAccount>,
     pub system_program: Program<'info, System>,
 }
 
 pub fn handler(ctx: Context<AddChainMapping>, params: AddChainMappingParams) -> Result<()> {
-        let alias_account = &mut ctx.accounts.alias_account;
+    let alias_account = &mut ctx.accounts.alias_account;
     
     // Verify the ZK proof
-     let public_key = zkp::PublicKey::from_bytes(&alias_account.zk_public_key)
+    let public_key = zkp::PublicKey::from_bytes(&alias_account.zk_public_key)
         .ok_or(ErrorCode::InvalidPublicKey)?;
     
     let message = merkle::hash_chain_mapping(&params.new_mapping);
@@ -42,7 +49,6 @@ pub fn handler(ctx: Context<AddChainMapping>, params: AddChainMappingParams) -> 
         zkp::verify(&public_key, &message, &proof),
         ErrorCode::InvalidProof
     );
-
     
     // Verify the Merkle proof
     let new_leaf = merkle::hash_chain_mapping(&params.new_mapping);

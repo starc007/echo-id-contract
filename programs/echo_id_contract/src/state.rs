@@ -6,7 +6,9 @@ pub struct AdminConfig {
 }
 
 #[account]
-pub struct ProjectSuffix {
+pub struct ProductOwner {
+    pub address: Pubkey,
+    pub is_active: bool,
     pub suffix: String,
 }
 
@@ -14,7 +16,7 @@ pub struct ProjectSuffix {
 pub struct AliasAccount {
     pub owner: Pubkey,
     pub username: String,
-    pub project_suffix: String,
+    pub product_suffix: String,
     pub chain_mappings_root: [u8; 32],
     pub chain_mapping_count: u32,
     pub reputation: i64,
