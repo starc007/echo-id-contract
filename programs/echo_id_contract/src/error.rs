@@ -86,4 +86,7 @@ pub enum EchoIDError {
 
     #[msg("Invalid signature")]
     InvalidSignature,
+      
+    #[msg("Signature verification failed")]
+    SignatureVerificationFailed,
 }

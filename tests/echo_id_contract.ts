@@ -3,7 +3,6 @@ import { AnchorError, type Program } from "@coral-xyz/anchor";
 import { Keypair, SystemProgram, PublicKey } from "@solana/web3.js";
 import { EchoIdContract } from "../target/types/echo_id_contract";
 import { expect } from "chai";
-import * as ed from "@noble/ed25519";
 
 describe("echo_id_contract", () => {
   console.log("Setting up test environment...");
@@ -121,9 +120,6 @@ describe("echo_id_contract", () => {
 
   it("Registers an alias", async () => {
     console.log("Testing alias registration...");
-    const chainType = { evm: {} };
-    const chainId = 1;
-    const address = "0x1234567890123456789012345678901234567890";
     const publicKey = aliasOwnerKeypair.publicKey.toBytes();
 
     console.log(
@@ -131,15 +127,17 @@ describe("echo_id_contract", () => {
       Buffer.from(publicKey).toString("hex")
     );
 
+    const initialChainMapping = {
+      chainType: { evm: {} },
+      address: "0x1234567890123456789012345678901234567890",
+      chainId: 1,
+    };
+
     const tx = await program.methods
       .registerAlias({
         username,
         publicKey: Array.from(publicKey),
-        initialChainMapping: {
-          chainType,
-          address,
-          chainId,
-        },
+        initialChainMapping,
       })
       .accounts({
         productOwner: productOwnerKeypair.publicKey,
@@ -158,7 +156,6 @@ describe("echo_id_contract", () => {
     );
     expect(aliasAccount.username).to.equal(username);
     expect(aliasAccount.productSuffix).to.equal(projectSuffix);
-    expect(aliasAccount.chainMappingCount).to.equal(1);
     expect(aliasAccount.reputation.toNumber()).to.equal(10);
     expect(aliasAccount.reputationUpdatedAt.toNumber()).to.be.greaterThan(0);
     console.log("Alias registered successfully");
@@ -166,18 +163,15 @@ describe("echo_id_contract", () => {
 
   it("Adds a chain mapping to an existing alias", async () => {
     console.log("Testing addition of chain mapping...");
-    const chainType = { svm: {} };
-    const chainId = 1;
-    const address = "SoLAddReSs111111111111111111111111111111";
-    const merkleProof: number[][] = []; // Empty proof for now
-
-    const message = Buffer.from(
-      JSON.stringify({ chainType, address, chainId })
-    );
-    const signature = await ed.sign(message, aliasOwnerKeypair.secretKey);
 
     // Fetch the alias account to get the correct owner
     const aliasAccount = await program.account.aliasAccount.fetch(aliasPda);
+
+    const newMapping = {
+      chainType: { svm: {} },
+      address: "SoLAddReSs111111111111111111111111111111",
+      chainId: 512,
+    };
 
     // Find the product owner PDA using the alias owner
     const [productOwnerPda] = PublicKey.findProgramAddressSync(
@@ -188,13 +182,7 @@ describe("echo_id_contract", () => {
     try {
       const tx = await program.methods
         .addChainMapping({
-          newMapping: {
-            chainType,
-            address,
-            chainId,
-          },
-          merkleProof,
-          signature: Array.from(signature),
+          newMapping,
         })
         .accounts({
           signer: aliasOwnerKeypair.publicKey,
@@ -210,7 +198,8 @@ describe("echo_id_contract", () => {
         aliasPda
       );
       console.log("Updated alias account:", updatedAliasAccount);
-      expect(updatedAliasAccount.chainMappingCount).to.equal(2);
+      expect(updatedAliasAccount.chainMappings.length).to.equal(2);
+      expect(updatedAliasAccount.chainMappings[1]).to.deep.equal(newMapping);
       console.log("Chain mapping added successfully");
     } catch (error) {
       console.error("Error details:", error);
@@ -219,26 +208,6 @@ describe("echo_id_contract", () => {
       }
       throw error;
     }
-  });
-
-  it("Verifies alias ownership", async () => {
-    console.log("Testing alias ownership verification...");
-    const message = Buffer.from(username + "@" + projectSuffix);
-    const signature = await ed.sign(message, aliasOwnerKeypair.secretKey);
-
-    console.log("Generated signature:", Array.from(signature));
-
-    const tx = await program.methods
-      .verifyAliasOwnership(Array.from(signature))
-      .accounts({
-        productOwner: productOwnerKeypair.publicKey,
-        productOwnerAccount: productOwnerPda,
-        aliasAccount: aliasPda,
-      })
-      .signers([productOwnerKeypair])
-      .rpc();
-    console.log("Verify alias ownership transaction:", tx);
-    console.log("Alias ownership verified successfully");
   });
 
   it("Updates reputation for an alias (admin only)", async () => {

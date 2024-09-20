@@ -3,12 +3,10 @@ use anchor_lang::prelude::*;
 pub mod state;
 pub mod error;
 pub mod instructions;
-pub mod signature;
-pub mod merkle;
 
 use instructions::*;
 
-declare_id!("9mwwGMTCzZt8grcAd7GEpLRUcBpfcywPBbPvozo66oYR");
+declare_id!("EsdBUciTqboxE3T1KMXo92rjBTWnhnwnknG1jgmdd8Ss");
 
 #[program]
 pub mod echo_id_contract {
@@ -32,9 +30,5 @@ pub mod echo_id_contract {
 
     pub fn update_reputation(ctx: Context<UpdateReputation>, username: String, project_suffix: String, change: i64) -> Result<()> {
         instructions::update_reputation::handler(ctx, username, project_suffix, change)
-    }
-
-    pub fn verify_alias_ownership(ctx: Context<VerifyAliasOwnership>, signature: [u8; 64]) -> Result<()> {
-        instructions::verify_alias_ownership::handler(ctx, signature)
     }
 }

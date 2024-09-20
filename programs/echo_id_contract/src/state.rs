@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+
+pub const MAX_CHAIN_MAPPINGS: usize = 32; 
 #[account]
 pub struct AdminConfig {
     pub admin: Pubkey,
@@ -17,11 +19,10 @@ pub struct AliasAccount {
     pub owner: Pubkey,
     pub username: String,
     pub product_suffix: String,
-    pub chain_mappings_root: [u8; 32],
-    pub chain_mapping_count: u32,
+    pub chain_mappings: Vec<ChainMapping>,
     pub reputation: i64,
     pub reputation_updated_at: i64,
-    pub public_key: [u8; 32], // Ed25519 public key
+    pub public_key: [u8; 32],
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
@@ -35,13 +36,4 @@ pub struct ChainMapping {
 pub enum ChainType {
     SVM,
     EVM,
-}
-
-impl ChainType {
-    pub fn to_bytes(&self) -> [u8; 4] {
-        match self {
-            ChainType::SVM => [0, 0, 0, 0],
-            ChainType::EVM => [0, 0, 0, 1],
-        }
-    }
 }

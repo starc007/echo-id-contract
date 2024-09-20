@@ -2,15 +2,11 @@ use anchor_lang::prelude::*;
 use crate::{
     error::EchoIDError as ErrorCode,
     state::{AliasAccount, ChainMapping, ProductOwner},
-    signature,
-    merkle,
 };
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct AddChainMappingParams {
     pub new_mapping: ChainMapping,
-    pub merkle_proof: Vec<[u8; 32]>,
-    pub signature: [u8; 64],
 }
 
 #[derive(Accounts)]
@@ -34,27 +30,17 @@ pub struct AddChainMapping<'info> {
     pub system_program: Program<'info, System>,
 }
 
-
-
 pub fn handler(ctx: Context<AddChainMapping>, params: AddChainMappingParams) -> Result<()> {
     let alias_account = &mut ctx.accounts.alias_account;
     
-    // Verify the signature
-    let message = merkle::hash_chain_mapping(&params.new_mapping);
-    let is_valid = signature::verify_signature(&alias_account.public_key, &message, &params.signature)?;
-    require!(is_valid, ErrorCode::InvalidSignature);
-    
-    // Verify the Merkle proof and compute new root
-    let (is_valid, new_root) = merkle::verify_and_update(
-        alias_account.chain_mappings_root,
-        merkle::hash_chain_mapping(&params.new_mapping),
-        &params.merkle_proof
+     // Check if the chain mapping already exists
+    require!(
+        !alias_account.chain_mappings.iter().any(|m| m.chain_type == params.new_mapping.chain_type),
+        ErrorCode::ChainMappingAlreadyExists
     );
-    require!(is_valid, ErrorCode::InvalidMerkleProof);
 
-    // Update the alias account
-    alias_account.chain_mappings_root = new_root;
-    alias_account.chain_mapping_count += 1;
+    // Add the new chain mapping
+    alias_account.chain_mappings.push(params.new_mapping);
 
     Ok(())
 }
