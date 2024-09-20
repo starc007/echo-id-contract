@@ -3,6 +3,7 @@ import { AnchorError, type Program } from "@coral-xyz/anchor";
 import { Keypair, SystemProgram, PublicKey } from "@solana/web3.js";
 import { EchoIdContract } from "../target/types/echo_id_contract";
 import { expect } from "chai";
+import * as ed from "@noble/ed25519";
 
 describe("echo_id_contract", () => {
   console.log("Setting up test environment...");
@@ -30,13 +31,14 @@ describe("echo_id_contract", () => {
   let suffixPda: PublicKey;
   let aliasOwnerKeypair: Keypair;
   let aliasPda: PublicKey;
-  const projectSuffix = "myapp";
-  const username = "alice";
+  const projectSuffix = "echoId";
+  const username = "saurabh";
 
   before(async () => {
     console.log("Initializing test accounts and PDAs...");
     adminKeypair = await createAndFundKeypair();
     productOwnerKeypair = await createAndFundKeypair();
+    aliasOwnerKeypair = await createAndFundKeypair();
     [adminPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("admin")],
       program.programId
@@ -119,23 +121,20 @@ describe("echo_id_contract", () => {
 
   it("Registers an alias", async () => {
     console.log("Testing alias registration...");
-    aliasOwnerKeypair = await createAndFundKeypair();
     const chainType = { evm: {} };
     const chainId = 1;
     const address = "0x1234567890123456789012345678901234567890";
-    // Generate a valid public key
-    const zkKeyPair = Keypair.generate();
-    const zkPublicKey = zkKeyPair.publicKey.toBytes();
+    const publicKey = aliasOwnerKeypair.publicKey.toBytes();
 
     console.log(
-      "Generated ZK public key:",
-      Buffer.from(zkPublicKey).toString("hex")
+      "Generated public key:",
+      Buffer.from(publicKey).toString("hex")
     );
 
     const tx = await program.methods
       .registerAlias({
         username,
-        zkPublicKey: Array.from(zkPublicKey),
+        publicKey: Array.from(publicKey),
         initialChainMapping: {
           chainType,
           address,
@@ -170,54 +169,67 @@ describe("echo_id_contract", () => {
     const chainType = { svm: {} };
     const chainId = 1;
     const address = "SoLAddReSs111111111111111111111111111111";
-    const merkleProof: number[][] = []; // Dummy Merkle proof
-    const zkProof = {
-      r: Array.from(new Uint8Array(32).fill(2)),
-      s: Array.from(new Uint8Array(32).fill(3)),
-    };
+    const merkleProof: number[][] = []; // Empty proof for now
 
-    const tx = await program.methods
-      .addChainMapping({
-        newMapping: {
-          chainType,
-          address,
-          chainId,
-        },
-        merkleProof,
-        zkProof,
-      })
-      .accounts({
-        productOwner: productOwnerKeypair.publicKey,
-        productOwnerAccount: productOwnerPda,
-        aliasAccount: aliasPda,
-        systemProgram: SystemProgram.programId,
-      })
-      .signers([productOwnerKeypair])
-      .preInstructions([
-        anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
-          units: 1_000_000,
-        }),
-      ])
-      .rpc();
-    console.log("Add chain mapping transaction:", tx);
-
-    const updatedAliasAccount = await program.account.aliasAccount.fetch(
-      aliasPda
+    const message = Buffer.from(
+      JSON.stringify({ chainType, address, chainId })
     );
-    console.log("Updated alias account:", updatedAliasAccount);
-    expect(updatedAliasAccount.chainMappingCount).to.equal(2);
-    console.log("Chain mapping added successfully");
+    const signature = await ed.sign(message, aliasOwnerKeypair.secretKey);
+
+    // Fetch the alias account to get the correct owner
+    const aliasAccount = await program.account.aliasAccount.fetch(aliasPda);
+
+    // Find the product owner PDA using the alias owner
+    const [productOwnerPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("product_owner"), aliasAccount.owner.toBuffer()],
+      program.programId
+    );
+
+    try {
+      const tx = await program.methods
+        .addChainMapping({
+          newMapping: {
+            chainType,
+            address,
+            chainId,
+          },
+          merkleProof,
+          signature: Array.from(signature),
+        })
+        .accounts({
+          signer: aliasOwnerKeypair.publicKey,
+          productOwnerAccount: productOwnerPda,
+          aliasAccount: aliasPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([aliasOwnerKeypair])
+        .rpc();
+      console.log("Add chain mapping transaction:", tx);
+
+      const updatedAliasAccount = await program.account.aliasAccount.fetch(
+        aliasPda
+      );
+      console.log("Updated alias account:", updatedAliasAccount);
+      expect(updatedAliasAccount.chainMappingCount).to.equal(2);
+      console.log("Chain mapping added successfully");
+    } catch (error) {
+      console.error("Error details:", error);
+      if (error instanceof anchor.web3.SendTransactionError) {
+        console.error("Transaction logs:", error.logs);
+      }
+      throw error;
+    }
   });
 
   it("Verifies alias ownership", async () => {
     console.log("Testing alias ownership verification...");
-    const zkProof = {
-      r: Array.from({ length: 32 }, (_, i) => i % 256),
-      s: Array.from({ length: 32 }, (_, i) => (i + 128) % 256),
-    };
+    const message = Buffer.from(username + "@" + projectSuffix);
+    const signature = await ed.sign(message, aliasOwnerKeypair.secretKey);
+
+    console.log("Generated signature:", Array.from(signature));
 
     const tx = await program.methods
-      .verifyAliasOwnership(zkProof)
+      .verifyAliasOwnership(Array.from(signature))
       .accounts({
         productOwner: productOwnerKeypair.publicKey,
         productOwnerAccount: productOwnerPda,

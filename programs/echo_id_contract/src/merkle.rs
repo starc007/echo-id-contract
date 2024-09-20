@@ -25,6 +25,7 @@ pub fn verify_and_update(root: [u8; 32], leaf: [u8; 32], proof: &[[u8; 32]]) -> 
     (current == root, current)
 }
 
+
 pub fn compute_merkle_root(leaves: &[[u8; 32]]) -> [u8; 32] {
     if leaves.is_empty() {
         return [0u8; 32];
@@ -36,20 +37,4 @@ pub fn compute_merkle_root(leaves: &[[u8; 32]]) -> [u8; 32] {
     hasher.update(leaves[0]);
     hasher.update(leaves[1]);
     hasher.finalize().into()
-}
-
-pub fn verify_merkle_proof(root: [u8; 32], leaf: [u8; 32], proof: &[[u8; 32]]) -> bool {
-    let mut current = leaf;
-    for &sibling in proof {
-        let mut hasher = Sha256::new();
-        if current <= sibling {
-            hasher.update(current);
-            hasher.update(sibling);
-        } else {
-            hasher.update(sibling);
-            hasher.update(current);
-        }
-        current = hasher.finalize().into();
-    }
-    current == root
 }

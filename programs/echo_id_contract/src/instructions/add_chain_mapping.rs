@@ -19,9 +19,9 @@ pub struct AddChainMapping<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
     #[account(
-        seeds = [b"product_owner", signer.key().as_ref()],
+        seeds = [b"product_owner", alias_account.owner.as_ref()],
         bump,
-        constraint = product_owner_account.address == signer.key() @ ErrorCode::Unauthorized,
+        constraint = product_owner_account.address == alias_account.owner @ ErrorCode::Unauthorized,
         constraint = product_owner_account.is_active @ ErrorCode::ProductOwnerNotActive
     )]
     pub product_owner_account: Account<'info, ProductOwner>,
@@ -29,21 +29,20 @@ pub struct AddChainMapping<'info> {
         mut,
         seeds = [alias_account.username.as_bytes(), b"@", alias_account.product_suffix.as_bytes()],
         bump,
-        constraint = alias_account.owner == signer.key() @ ErrorCode::Unauthorized
     )]
     pub alias_account: Account<'info, AliasAccount>,
     pub system_program: Program<'info, System>,
 }
+
+
 
 pub fn handler(ctx: Context<AddChainMapping>, params: AddChainMappingParams) -> Result<()> {
     let alias_account = &mut ctx.accounts.alias_account;
     
     // Verify the signature
     let message = merkle::hash_chain_mapping(&params.new_mapping);
-    require!(
-        signature::verify_signature(&alias_account.public_key, &message, &params.signature),
-        ErrorCode::InvalidSignature
-    );
+    let is_valid = signature::verify_signature(&alias_account.public_key, &message, &params.signature)?;
+    require!(is_valid, ErrorCode::InvalidSignature);
     
     // Verify the Merkle proof and compute new root
     let (is_valid, new_root) = merkle::verify_and_update(

@@ -35,13 +35,8 @@ pub fn handler(ctx: Context<VerifyAliasOwnership>, signature: [u8; 64]) -> Resul
         alias_account.product_suffix.as_bytes()
     ].concat();
 
-    require!(
-        signature::verify_signature(&alias_account.public_key, &message, &signature),
-        ErrorCode::InvalidSignature
-    );
-
-    // If we've reached this point, the proof is valid
-    msg!("Alias ownership verified successfully");
+   let is_valid = signature::verify_signature(&alias_account.public_key, &message, &signature)?;
+    require!(is_valid, ErrorCode::InvalidSignature);
 
     Ok(())
 }

@@ -8,7 +8,7 @@ pub mod merkle;
 
 use instructions::*;
 
-declare_id!("FLWz8YARctJPAAdcx347mSMrxwp9zNsZExQ91Sf2Yos2");
+declare_id!("9mwwGMTCzZt8grcAd7GEpLRUcBpfcywPBbPvozo66oYR");
 
 #[program]
 pub mod echo_id_contract {
