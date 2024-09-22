@@ -6,7 +6,7 @@ pub mod instructions;
 
 use instructions::*;
 
-declare_id!("EsdBUciTqboxE3T1KMXo92rjBTWnhnwnknG1jgmdd8Ss");
+declare_id!("5bwbj89jCxAiRcBgbquBTWgcrMRzW2fgfd3WGnk7Lyrs");
 
 #[program]
 pub mod echo_id_contract {
@@ -31,4 +31,5 @@ pub mod echo_id_contract {
     pub fn update_reputation(ctx: Context<UpdateReputation>, username: String, project_suffix: String, change: i64) -> Result<()> {
         instructions::update_reputation::handler(ctx, username, project_suffix, change)
     }
+
 }

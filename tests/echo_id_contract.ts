@@ -66,8 +66,8 @@ describe("echo_id_contract", () => {
       .initialize()
       .accounts({
         admin: adminKeypair.publicKey,
-        adminConfig: adminPda,
-        systemProgram: SystemProgram.programId,
+        // adminConfig: adminPda,
+        // systemProgram: SystemProgram.programId,
       })
       .signers([adminKeypair])
       .rpc();
@@ -87,11 +87,11 @@ describe("echo_id_contract", () => {
       .registerProductOwner(projectSuffix)
       .accounts({
         admin: adminKeypair.publicKey,
-        adminConfig: adminPda,
-        productOwner: productOwnerPda,
+        // adminConfig: adminPda,
+        // productOwner: productOwnerPda,
         newProductOwner: productOwnerKeypair.publicKey,
-        suffixAccount: suffixPda,
-        systemProgram: SystemProgram.programId,
+        // suffixAccount: suffixPda,
+        // systemProgram: SystemProgram.programId,
       })
       .signers([adminKeypair])
       .rpc();
@@ -141,9 +141,6 @@ describe("echo_id_contract", () => {
       })
       .accounts({
         productOwner: productOwnerKeypair.publicKey,
-        productOwnerAccount: productOwnerPda,
-        aliasAccount: aliasPda,
-        systemProgram: SystemProgram.programId,
       })
       .signers([productOwnerKeypair])
       .rpc();
@@ -186,9 +183,9 @@ describe("echo_id_contract", () => {
         })
         .accounts({
           signer: aliasOwnerKeypair.publicKey,
-          productOwnerAccount: productOwnerPda,
+          // productOwnerAccount: productOwnerPda,
           aliasAccount: aliasPda,
-          systemProgram: SystemProgram.programId,
+          // systemProgram: SystemProgram.programId,
         })
         .signers([aliasOwnerKeypair])
         .rpc();
@@ -222,9 +219,6 @@ describe("echo_id_contract", () => {
       )
       .accounts({
         admin: adminKeypair.publicKey,
-        adminConfig: adminPda,
-        aliasAccount: aliasPda,
-        systemProgram: SystemProgram.programId,
       })
       .signers([adminKeypair])
       .rpc();
