@@ -8,8 +8,8 @@ pub struct AdminConfig {
 }
 
 #[account]
-pub struct ProductOwner {
-    pub address: Pubkey,
+pub struct SuffixAccount {
+    pub owner: Pubkey,
     pub is_active: bool,
     pub suffix: String,
 }

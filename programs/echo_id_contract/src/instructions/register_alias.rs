@@ -21,7 +21,7 @@ pub struct RegisterAlias<'info> {
         bump,
         constraint = suffix_account.is_active @ ErrorCode::InvalidProjectSuffix
     )]
-    pub suffix_account: Account<'info, ProductOwner>,
+    pub suffix_account: Account<'info, SuffixAccount>,
     #[account(
         init,
         payer = user,

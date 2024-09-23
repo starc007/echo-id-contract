@@ -87,33 +87,57 @@ describe("echo_id_contract", () => {
       .registerProductOwner(projectSuffix)
       .accounts({
         admin: adminKeypair.publicKey,
-        // adminConfig: adminPda,
+        adminConfig: adminPda,
         // productOwner: productOwnerPda,
         newProductOwner: productOwnerKeypair.publicKey,
-        // suffixAccount: suffixPda,
-        // systemProgram: SystemProgram.programId,
+        suffixAccount: suffixPda,
+        systemProgram: SystemProgram.programId,
       })
       .signers([adminKeypair])
       .rpc();
     console.log("Register product owner transaction:", tx);
 
-    const productOwnerAccount = await program.account.productOwner.fetch(
-      productOwnerPda
-    );
-    console.log("Product owner account:", productOwnerAccount);
-    expect(productOwnerAccount.address.toBase58()).to.equal(
-      productOwnerKeypair.publicKey.toBase58()
-    );
-    expect(productOwnerAccount.isActive).to.be.true;
-    expect(productOwnerAccount.suffix).to.equal(projectSuffix);
-
-    const suffixAccount = await program.account.productOwner.fetch(suffixPda);
+    const suffixAccount = await program.account.suffixAccount.fetch(suffixPda);
     console.log("Suffix account:", suffixAccount);
-    expect(suffixAccount.address.toBase58()).to.equal(
+    expect(suffixAccount.owner.toBase58()).to.equal(
       productOwnerKeypair.publicKey.toBase58()
     );
     expect(suffixAccount.isActive).to.be.true;
     expect(suffixAccount.suffix).to.equal(projectSuffix);
+
+    console.log("Product owner registered with suffix successfully");
+  });
+  it("Registers a new sufix with same product owner", async () => {
+    console.log("Testing product owner registration with suffix...");
+
+    const [newsuffixPda] = await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from("suffix"), Buffer.from("echoId2")],
+      program.programId
+    );
+
+    const tx = await program.methods
+      .registerProductOwner("echoId2")
+      .accounts({
+        admin: adminKeypair.publicKey,
+        adminConfig: adminPda,
+        // productOwner: productOwnerPda,
+        newProductOwner: productOwnerKeypair.publicKey,
+        suffixAccount: newsuffixPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([adminKeypair])
+      .rpc();
+    console.log("Register product owner transaction:", tx);
+
+    const suffixAccount = await program.account.suffixAccount.fetch(
+      newsuffixPda
+    );
+    console.log("Suffix account:", suffixAccount);
+    expect(suffixAccount.owner.toBase58()).to.equal(
+      productOwnerKeypair.publicKey.toBase58()
+    );
+    expect(suffixAccount.isActive).to.be.true;
+    expect(suffixAccount.suffix).to.equal("echoId2");
 
     console.log("Product owner registered with suffix successfully");
   });
