@@ -22,7 +22,6 @@ pub struct AliasAccount {
     pub chain_mappings: Vec<ChainMapping>,
     pub reputation: i64,
     pub reputation_updated_at: i64,
-    pub public_key: [u8; 32],
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]

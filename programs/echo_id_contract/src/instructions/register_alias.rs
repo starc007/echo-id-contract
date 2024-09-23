@@ -7,7 +7,7 @@ use crate::{
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct RegisterAliasParams {
     pub username: String,
-    pub public_key: [u8; 32],
+    pub suffix: String,
     pub initial_chain_mapping: ChainMapping,
 }
 
@@ -15,29 +15,27 @@ pub struct RegisterAliasParams {
 #[instruction(params: RegisterAliasParams)]
 pub struct RegisterAlias<'info> {
     #[account(mut)]
-    pub product_owner: Signer<'info>,
+    pub user: Signer<'info>,
     #[account(
-        seeds = [b"product_owner", product_owner.key().as_ref()],
+        seeds = [b"suffix", params.suffix.as_bytes()],
         bump,
-        constraint = product_owner_account.address == product_owner.key() @ ErrorCode::Unauthorized,
-        constraint = product_owner_account.is_active @ ErrorCode::ProductOwnerNotActive
+        constraint = suffix_account.is_active @ ErrorCode::InvalidProjectSuffix
     )]
-    pub product_owner_account: Account<'info, ProductOwner>,
+    pub suffix_account: Account<'info, ProductOwner>,
     #[account(
         init,
-        payer = product_owner,
+        payer = user,
         space = 8 + // discriminator
                 32 + // owner
                 4 + params.username.len() + // username
-                4 + product_owner_account.suffix.len() + // product_suffix
+                4 + params.suffix.len() + // product_suffix
                 4 + // vec length for chain_mappings
                 (1 + // chain type
                  4 + params.initial_chain_mapping.address.len() + // address
                  4) * 10 + // chain_id, assuming max 10 mappings
                 8 + // reputation
-                8 + // reputation_updated_at
-                32, // public_key
-        seeds = [params.username.as_bytes(), b"@", product_owner_account.suffix.as_bytes()],
+                8, // reputation_updated_at
+        seeds = [params.username.as_bytes(), b"@", params.suffix.as_bytes()],
         bump,
     )]
     pub alias_account: Account<'info, AliasAccount>,
@@ -48,12 +46,10 @@ pub fn handler(ctx: Context<RegisterAlias>, params: RegisterAliasParams) -> Resu
     require!(!params.username.contains('@'), ErrorCode::InvalidUsername);
     
     let alias_account = &mut ctx.accounts.alias_account;
-    let product_owner_account = &ctx.accounts.product_owner_account;
     
-    alias_account.owner = *ctx.accounts.product_owner.key;
+    alias_account.owner = ctx.accounts.user.key();
     alias_account.username = params.username;
-    alias_account.product_suffix = product_owner_account.suffix.clone();
-    alias_account.public_key = params.public_key;
+    alias_account.product_suffix = params.suffix;
 
     // Initialize with the first chain mapping
     alias_account.chain_mappings = vec![params.initial_chain_mapping];

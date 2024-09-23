@@ -136,20 +136,23 @@ describe("echo_id_contract", () => {
     const tx = await program.methods
       .registerAlias({
         username,
-        publicKey: Array.from(publicKey),
+        suffix: projectSuffix,
         initialChainMapping,
       })
       .accounts({
-        productOwner: productOwnerKeypair.publicKey,
+        user: aliasOwnerKeypair.publicKey,
+        suffixAccount: suffixPda,
+        aliasAccount: aliasPda,
+        systemProgram: SystemProgram.programId,
       })
-      .signers([productOwnerKeypair])
+      .signers([aliasOwnerKeypair])
       .rpc();
     console.log("Register alias transaction:", tx);
 
     const aliasAccount = await program.account.aliasAccount.fetch(aliasPda);
     console.log("Alias account:", aliasAccount);
     expect(aliasAccount.owner.toBase58()).to.equal(
-      productOwnerKeypair.publicKey.toBase58()
+      aliasOwnerKeypair.publicKey.toBase58()
     );
     expect(aliasAccount.username).to.equal(username);
     expect(aliasAccount.productSuffix).to.equal(projectSuffix);
@@ -170,22 +173,15 @@ describe("echo_id_contract", () => {
       chainId: 512,
     };
 
-    // Find the product owner PDA using the alias owner
-    const [productOwnerPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("product_owner"), aliasAccount.owner.toBuffer()],
-      program.programId
-    );
-
     try {
       const tx = await program.methods
         .addChainMapping({
           newMapping,
         })
         .accounts({
-          signer: aliasOwnerKeypair.publicKey,
-          // productOwnerAccount: productOwnerPda,
+          aliasOwner: aliasOwnerKeypair.publicKey,
           aliasAccount: aliasPda,
-          // systemProgram: SystemProgram.programId,
+          systemProgram: SystemProgram.programId,
         })
         .signers([aliasOwnerKeypair])
         .rpc();

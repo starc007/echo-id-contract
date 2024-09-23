@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use crate::{
     error::EchoIDError as ErrorCode,
-    state::{AliasAccount, ChainMapping, ProductOwner},
+    state::{AliasAccount, ChainMapping},
 };
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -13,18 +13,12 @@ pub struct AddChainMappingParams {
 #[instruction(params: AddChainMappingParams)]
 pub struct AddChainMapping<'info> {
     #[account(mut)]
-    pub signer: Signer<'info>,
-    #[account(
-        seeds = [b"product_owner", alias_account.owner.as_ref()],
-        bump,
-        constraint = product_owner_account.address == alias_account.owner @ ErrorCode::Unauthorized,
-        constraint = product_owner_account.is_active @ ErrorCode::ProductOwnerNotActive
-    )]
-    pub product_owner_account: Account<'info, ProductOwner>,
+    pub alias_owner: Signer<'info>,
     #[account(
         mut,
         seeds = [alias_account.username.as_bytes(), b"@", alias_account.product_suffix.as_bytes()],
         bump,
+        constraint = alias_account.owner == alias_owner.key() @ ErrorCode::Unauthorized
     )]
     pub alias_account: Account<'info, AliasAccount>,
     pub system_program: Program<'info, System>,
