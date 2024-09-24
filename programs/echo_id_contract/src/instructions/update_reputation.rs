@@ -3,7 +3,7 @@ use crate::state::{AliasAccount, AdminConfig};
 use crate::error::EchoIDError as ErrorCode;
 
 #[derive(Accounts)]
-#[instruction(username: String, project_suffix: String, reputation_change: i64)]
+#[instruction(username: String, project_suffix: String,chain_name: String, reputation_change: i64)]
 pub struct UpdateReputation<'info> {
     #[account(
         seeds = [b"admin"],
@@ -15,22 +15,23 @@ pub struct UpdateReputation<'info> {
     pub admin: Signer<'info>,
     #[account(
         mut,
-        seeds = [username.as_bytes(), b"@", project_suffix.as_bytes()],
+        seeds = [username.as_bytes(), b"@", project_suffix.as_bytes(),chain_name.as_bytes()],
         bump,
         constraint = alias_account.username == username @ ErrorCode::InvalidAlias,
-        constraint = alias_account.product_suffix == project_suffix @ ErrorCode::InvalidProjectSuffix
+        constraint = alias_account.product_suffix == project_suffix @ ErrorCode::InvalidProjectSuffix,
+        constraint = alias_account.chain_info.name == chain_name @ ErrorCode::InvalidChainName
     )]
     pub alias_account: Account<'info, AliasAccount>,
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<UpdateReputation>, username: String, project_suffix: String, reputation_change: i64) -> Result<()> {
+pub fn handler(ctx: Context<UpdateReputation>, username: String, project_suffix: String, chain_name: String, reputation_change: i64) -> Result<()> {
     let alias_account = &mut ctx.accounts.alias_account;
     
     // Verify that the provided username and project_suffix match the account
     require!(alias_account.username == username, ErrorCode::InvalidAlias);
     require!(alias_account.product_suffix == project_suffix, ErrorCode::InvalidProjectSuffix);
-
+    require!(alias_account.chain_info.name == chain_name, ErrorCode::InvalidChainName);
     // Update reputation
     alias_account.reputation = alias_account.reputation.saturating_add(reputation_change);
     alias_account.reputation_updated_at = Clock::get()?.unix_timestamp;

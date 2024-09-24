@@ -89,4 +89,7 @@ pub enum EchoIDError {
       
     #[msg("Signature verification failed")]
     SignatureVerificationFailed,
+
+    #[msg("Invalid chain name")]
+    InvalidChainName,
 }

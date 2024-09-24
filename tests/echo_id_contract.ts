@@ -30,6 +30,7 @@ describe("echo_id_contract", () => {
   let suffixPda: PublicKey;
   let aliasOwnerKeypair: Keypair;
   let aliasPda: PublicKey;
+  let aliasPdaEvm: PublicKey;
   const projectSuffix = "echoId";
   const username = "saurabh";
 
@@ -46,17 +47,19 @@ describe("echo_id_contract", () => {
       [Buffer.from("product_owner"), productOwnerKeypair.publicKey.toBuffer()],
       program.programId
     );
+
     [suffixPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("suffix"), Buffer.from(projectSuffix)],
       program.programId
     );
+
     [aliasPda] = PublicKey.findProgramAddressSync(
       [Buffer.from(username), Buffer.from("@"), Buffer.from(projectSuffix)],
       program.programId
     );
     console.log("Admin PDA:", adminPda.toBase58());
     console.log("Product Owner PDA:", productOwnerPda.toBase58());
-    console.log("Suffix PDA:", suffixPda.toBase58());
+    // console.log("Suffix PDA:", suffixPda.toBase58());
     console.log("Alias PDA:", aliasPda.toBase58());
   });
 
@@ -151,29 +154,46 @@ describe("echo_id_contract", () => {
       Buffer.from(publicKey).toString("hex")
     );
 
-    const initialChainMapping = {
-      chainType: { evm: {} },
+    const chainInfo = {
+      name: "evm",
       address: "0x1234567890123456789012345678901234567890",
       chainId: 1,
     };
+
+    const metadata = {
+      name: "saurabh",
+      imageUrl:
+        "https://images.pexels.com/photos/1624438/pexels-photo-1624438.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=400&h=250&fit=crop&crop=focalpoint",
+    };
+
+    const seeds = [
+      Buffer.from(username),
+      Buffer.from("@"),
+      Buffer.from(projectSuffix),
+      Buffer.from(chainInfo.name),
+    ];
+    [aliasPdaEvm] = PublicKey.findProgramAddressSync(seeds, program.programId);
+
+    console.log("Alias PDA (EVM):", aliasPdaEvm.toBase58());
 
     const tx = await program.methods
       .registerAlias({
         username,
         suffix: projectSuffix,
-        initialChainMapping,
+        chainInfo,
+        metadata,
       })
       .accounts({
         user: aliasOwnerKeypair.publicKey,
         suffixAccount: suffixPda,
-        aliasAccount: aliasPda,
+        aliasAccount: aliasPdaEvm,
         systemProgram: SystemProgram.programId,
       })
       .signers([aliasOwnerKeypair])
       .rpc();
     console.log("Register alias transaction:", tx);
 
-    const aliasAccount = await program.account.aliasAccount.fetch(aliasPda);
+    const aliasAccount = await program.account.aliasAccount.fetch(aliasPdaEvm);
     console.log("Alias account:", aliasAccount);
     expect(aliasAccount.owner.toBase58()).to.equal(
       aliasOwnerKeypair.publicKey.toBase58()
@@ -185,67 +205,91 @@ describe("echo_id_contract", () => {
     console.log("Alias registered successfully");
   });
 
-  it("Adds a chain mapping to an existing alias", async () => {
-    console.log("Testing addition of chain mapping...");
+  it("Registers an alias with different chain", async () => {
+    console.log("Testing alias registration...");
+    const publicKey = aliasOwnerKeypair.publicKey.toBytes();
 
-    // Fetch the alias account to get the correct owner
-    const aliasAccount = await program.account.aliasAccount.fetch(aliasPda);
+    console.log(
+      "Generated public key:",
+      Buffer.from(publicKey).toString("hex")
+    );
 
-    const newMapping = {
-      chainType: { svm: {} },
-      address: "SoLAddReSs111111111111111111111111111111",
-      chainId: 512,
+    const chainInfo = {
+      name: "solana",
+      address: "1234567890123456789012345678901234567890",
+      chainId: 199,
     };
 
-    try {
-      const tx = await program.methods
-        .addChainMapping({
-          newMapping,
-        })
-        .accounts({
-          aliasOwner: aliasOwnerKeypair.publicKey,
-          aliasAccount: aliasPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([aliasOwnerKeypair])
-        .rpc();
-      console.log("Add chain mapping transaction:", tx);
+    const metadata = {
+      name: "saurabh",
+      imageUrl:
+        "https://images.pexels.com/photos/1624438/pexels-photo-1624438.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=400&h=250&fit=crop&crop=focalpoint",
+    };
 
-      const updatedAliasAccount = await program.account.aliasAccount.fetch(
-        aliasPda
-      );
-      console.log("Updated alias account:", updatedAliasAccount);
-      expect(updatedAliasAccount.chainMappings.length).to.equal(2);
-      expect(updatedAliasAccount.chainMappings[1]).to.deep.equal(newMapping);
-      console.log("Chain mapping added successfully");
-    } catch (error) {
-      console.error("Error details:", error);
-      if (error instanceof anchor.web3.SendTransactionError) {
-        console.error("Transaction logs:", error.logs);
-      }
-      throw error;
-    }
+    const [aliasPdaSolana] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from(username),
+        Buffer.from("@"),
+        Buffer.from(projectSuffix),
+        Buffer.from(chainInfo.name),
+      ],
+      program.programId
+    );
+
+    const tx = await program.methods
+      .registerAlias({
+        username,
+        suffix: projectSuffix,
+        chainInfo,
+        metadata,
+      })
+      .accounts({
+        user: aliasOwnerKeypair.publicKey,
+        suffixAccount: suffixPda,
+        aliasAccount: aliasPdaSolana,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([aliasOwnerKeypair])
+      .rpc();
+    console.log("Register alias transaction:", tx);
+
+    const aliasAccount = await program.account.aliasAccount.fetch(
+      aliasPdaSolana
+    );
+    console.log("Alias account:", aliasAccount);
+    expect(aliasAccount.owner.toBase58()).to.equal(
+      aliasOwnerKeypair.publicKey.toBase58()
+    );
+    expect(aliasAccount.username).to.equal(username);
+    expect(aliasAccount.productSuffix).to.equal(projectSuffix);
+    expect(aliasAccount.reputation.toNumber()).to.equal(10);
+    expect(aliasAccount.reputationUpdatedAt.toNumber()).to.be.greaterThan(0);
+    console.log("Alias registered successfully");
   });
 
   it("Updates reputation for an alias (admin only)", async () => {
     console.log("Testing reputation update...");
     const reputationChange = 20;
-
+    const chainName = "evm";
+    console.log("Alias PDA (EVM):", aliasPdaEvm.toBase58());
     const tx = await program.methods
       .updateReputation(
         username,
         projectSuffix,
+        chainName,
         new anchor.BN(reputationChange)
       )
       .accounts({
         admin: adminKeypair.publicKey,
+        adminConfig: adminPda,
+        aliasAccount: aliasPdaEvm,
       })
       .signers([adminKeypair])
       .rpc();
     console.log("Update reputation transaction:", tx);
 
     const updatedAliasAccount = await program.account.aliasAccount.fetch(
-      aliasPda
+      aliasPdaEvm
     );
     console.log(
       "Updated alias account after reputation change:",

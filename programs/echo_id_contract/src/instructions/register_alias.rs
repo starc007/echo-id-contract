@@ -8,7 +8,8 @@ use crate::{
 pub struct RegisterAliasParams {
     pub username: String,
     pub suffix: String,
-    pub initial_chain_mapping: ChainMapping,
+    pub chain_info: ChainInfo,
+    pub metadata: AliasMetadata,
 }
 
 #[derive(Accounts)]
@@ -25,17 +26,9 @@ pub struct RegisterAlias<'info> {
     #[account(
         init,
         payer = user,
-        space = 8 + // discriminator
-                32 + // owner
-                4 + params.username.len() + // username
-                4 + params.suffix.len() + // product_suffix
-                4 + // vec length for chain_mappings
-                (1 + // chain type
-                 4 + params.initial_chain_mapping.address.len() + // address
-                 4) * 10 + // chain_id, assuming max 10 mappings
-                8 + // reputation
-                8, // reputation_updated_at
-        seeds = [params.username.as_bytes(), b"@", params.suffix.as_bytes()],
+        space = 8 + 32 + 4 + params.username.len() + 4 + params.suffix.len() + 8 + 4 + params.chain_info.name.len() + 4 + params.chain_info.address.len() + 8 + 8 + 4 + params.metadata.name.len() + 4 + params.metadata.image_url.len(),
+
+        seeds = [params.username.as_bytes(), b"@", params.suffix.as_bytes(),params.chain_info.name.as_bytes()],
         bump,
     )]
     pub alias_account: Account<'info, AliasAccount>,
@@ -51,8 +44,9 @@ pub fn handler(ctx: Context<RegisterAlias>, params: RegisterAliasParams) -> Resu
     alias_account.username = params.username;
     alias_account.product_suffix = params.suffix;
 
-    // Initialize with the first chain mapping
-    alias_account.chain_mappings = vec![params.initial_chain_mapping];
+    
+    alias_account.chain_info = params.chain_info;
+    alias_account.metadata = params.metadata;
     
     alias_account.reputation = 10; // Initial reputation
     alias_account.reputation_updated_at = Clock::get()?.unix_timestamp;
