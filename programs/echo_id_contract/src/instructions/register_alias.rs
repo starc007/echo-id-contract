@@ -10,6 +10,7 @@ pub struct RegisterAliasParams {
     pub suffix: String,
     pub chain_info: ChainInfo,
     pub metadata: AliasMetadata,
+    pub user_address: Pubkey,
 }
 
 #[derive(Accounts)]
@@ -40,7 +41,7 @@ pub fn handler(ctx: Context<RegisterAlias>, params: RegisterAliasParams) -> Resu
     
     let alias_account = &mut ctx.accounts.alias_account;
     
-    alias_account.owner = ctx.accounts.user.key();
+    alias_account.owner = params.user_address;
     alias_account.username = params.username;
     alias_account.product_suffix = params.suffix;
 
@@ -50,6 +51,14 @@ pub fn handler(ctx: Context<RegisterAlias>, params: RegisterAliasParams) -> Resu
     
     alias_account.reputation = 10; // Initial reputation
     alias_account.reputation_updated_at = Clock::get()?.unix_timestamp;
+
+    emit!(AliasRegistered {
+        username: alias_account.username.clone(),
+        suffix: alias_account.product_suffix.clone(),
+        chain_info: alias_account.chain_info.clone(),
+        metadata: alias_account.metadata.clone(),
+        user_address: alias_account.owner,
+    });
 
     Ok(())
 }

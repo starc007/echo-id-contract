@@ -32,5 +32,10 @@ pub fn handler(ctx: Context<RegisterProductOwner>, suffix: String) -> Result<()>
     suffix_account.is_active = true;
     suffix_account.suffix = suffix;
 
+    emit!(SuffixUpdated {
+        suffix: suffix_account.suffix.clone(),
+        owner: suffix_account.owner,
+    });
+
     Ok(())
 }

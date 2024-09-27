@@ -182,6 +182,7 @@ describe("echo_id_contract", () => {
         suffix: projectSuffix,
         chainInfo,
         metadata,
+        userAddress: aliasOwnerKeypair.publicKey,
       })
       .accounts({
         user: aliasOwnerKeypair.publicKey,
@@ -242,6 +243,7 @@ describe("echo_id_contract", () => {
         suffix: projectSuffix,
         chainInfo,
         metadata,
+        userAddress: aliasOwnerKeypair.publicKey,
       })
       .accounts({
         user: aliasOwnerKeypair.publicKey,

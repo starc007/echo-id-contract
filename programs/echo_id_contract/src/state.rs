@@ -37,3 +37,27 @@ pub struct AliasMetadata {
     pub name: String,
     pub image_url: String,
 }
+
+#[event]
+pub struct AliasRegistered {
+    pub username: String,
+    pub suffix: String,
+    pub chain_info: ChainInfo,
+    pub metadata: AliasMetadata,
+    pub user_address: Pubkey,
+}
+
+#[event]
+pub struct AliasReputationUpdated {
+    pub username: String,
+    pub suffix: String,
+    pub chain_info: ChainInfo,
+    pub metadata: AliasMetadata,
+    pub user_address: Pubkey,
+}
+
+#[event]
+pub struct SuffixUpdated {
+    pub suffix: String,
+    pub owner: Pubkey,
+}

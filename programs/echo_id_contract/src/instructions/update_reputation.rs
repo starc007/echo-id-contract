@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
-use crate::state::{AliasAccount, AdminConfig};
+use crate::state::*;
 use crate::error::EchoIDError as ErrorCode;
+
+
 
 #[derive(Accounts)]
 #[instruction(username: String, project_suffix: String,chain_name: String, reputation_change: i64)]
@@ -36,6 +38,13 @@ pub fn handler(ctx: Context<UpdateReputation>, username: String, project_suffix:
     alias_account.reputation = alias_account.reputation.saturating_add(reputation_change);
     alias_account.reputation_updated_at = Clock::get()?.unix_timestamp;
 
-    msg!("Updated reputation for {}@{} by {}", username, project_suffix, reputation_change);
+    
+    emit!(AliasReputationUpdated {
+        username: alias_account.username.clone(),
+        suffix: alias_account.product_suffix.clone(),
+        chain_info: alias_account.chain_info.clone(),
+        metadata: alias_account.metadata.clone(),
+        user_address: alias_account.owner,
+    });
     Ok(())
 }
