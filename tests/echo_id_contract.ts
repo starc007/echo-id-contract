@@ -186,9 +186,10 @@ describe("echo_id_contract", () => {
       })
       .accounts({
         user: aliasOwnerKeypair.publicKey,
-        suffixAccount: suffixPda,
-        aliasAccount: aliasPdaEvm,
-        systemProgram: SystemProgram.programId,
+        payer: aliasOwnerKeypair.publicKey,
+        // suffixAccount: suffixPda,
+        // aliasAccount: aliasPdaEvm,
+        // systemProgram: SystemProgram.programId,
       })
       .signers([aliasOwnerKeypair])
       .rpc();
@@ -247,9 +248,10 @@ describe("echo_id_contract", () => {
       })
       .accounts({
         user: aliasOwnerKeypair.publicKey,
-        suffixAccount: suffixPda,
-        aliasAccount: aliasPdaSolana,
-        systemProgram: SystemProgram.programId,
+        payer: aliasOwnerKeypair.publicKey,
+        // suffixAccount: suffixPda,
+        // aliasAccount: aliasPdaSolana,
+        // systemProgram: SystemProgram.programId,
       })
       .signers([aliasOwnerKeypair])
       .rpc();

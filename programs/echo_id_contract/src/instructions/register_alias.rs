@@ -17,7 +17,12 @@ pub struct RegisterAliasParams {
 #[instruction(params: RegisterAliasParams)]
 pub struct RegisterAlias<'info> {
     #[account(mut)]
-    pub user: Signer<'info>,
+    pub payer: Signer<'info>,
+    /// CHECK: This account is not written to or read from. It's just used for authorization.
+    #[account(
+        constraint = user.key() == params.user_address @ ErrorCode::InvalidUser
+    )]
+    pub user: AccountInfo<'info>,
     #[account(
         seeds = [b"suffix", params.suffix.as_bytes()],
         bump,
@@ -26,7 +31,7 @@ pub struct RegisterAlias<'info> {
     pub suffix_account: Account<'info, SuffixAccount>,
     #[account(
         init,
-        payer = user,
+        payer = payer,
         space = 8 + 32 + 4 + params.username.len() + 4 + params.suffix.len() + 8 + 4 + params.chain_info.name.len() + 4 + params.chain_info.address.len() + 8 + 8 + 4 + params.metadata.name.len() + 4 + params.metadata.image_url.len(),
 
         seeds = [params.username.as_bytes(), b"@", params.suffix.as_bytes(),params.chain_info.name.as_bytes()],

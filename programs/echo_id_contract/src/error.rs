@@ -92,4 +92,7 @@ pub enum EchoIDError {
 
     #[msg("Invalid chain name")]
     InvalidChainName,
+
+    #[msg("Invalid user")]
+    InvalidUser,
 }

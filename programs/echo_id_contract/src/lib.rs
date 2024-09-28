@@ -6,7 +6,7 @@ pub mod instructions;
 
 use instructions::*;
 
-declare_id!("4e3sgAjZCPNq8Zwb4YdgTeHQnqtYZyP58RnyDzarABtZ");
+declare_id!("5zFfHUucGgrkRuCAvEE2QSr5aoXrZmeARULQZ5k3YKy");
 
 #[program]
 pub mod echo_id_contract {
