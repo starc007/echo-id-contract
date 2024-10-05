@@ -11,21 +11,31 @@ EchoId is a Solana-based decentralized identity system enabling user-owned, cros
 - Product owner registration
 - Alias registration and management
 
-## Smart Contract Structure
-
-The EchoId Protocol smart contract consists of the following main components:
-
-- `lib.rs`: Main contract entry point and instruction definitions
-- `state.rs`: State definitions and events
-- `error.rs`: Custom error definitions
-- `initialize.rs`: Initialization logic
-- `register_product_owner.rs`: Product owner registration
-- `register_alias.rs`: Alias registration
-- `update_reputation.rs`: Reputation update logic
-
 ## Current Flowchart
 
 ![alt text](image.png)
+
+## How Dapps Can Use the EchoId Protocol
+
+The EchoId Protocol is designed to be easily integrated into various products and platforms. Here's how products can leverage EchoId:
+
+1. Suffix Registration:
+
+   - Products must first register their unique suffix on the EchoId platform.
+   - This suffix will be used to create identities in the format `username@suffix`.
+
+2. Integration Options:
+
+   - Once the suffix is registered, products have two main options for integrating EchoId:
+     a) Using the EchoId Contract: Products can interact directly with the EchoId smart contract.
+     b) Using EchoId APIs: Products can utilize the APIs provided by EchoId for easier integration.
+
+3. Core Functionalities:
+   - Identity Registration: Products can allow users to create their EchoId identity using the registered suffix.
+   - Identity Resolution: Products can verify identities and retrieve associated data.
+   - Cross-Chain Operations: For products spanning multiple blockchains, EchoId's cross-chain features ensure consistent identity management.
+
+By integrating the EchoId Protocol, products can offer users a seamless, cross-chain identity management experience while leveraging the security and decentralization of blockchain. This integration allows for innovative features and improved user experiences across various blockchain-based applications and services.
 
 ## Future Updates: Going Multi-Chain!
 
@@ -48,6 +58,9 @@ We've got some exciting plans cooking for the future. Let's talk about where we'
 5. **Playing Well with Others**:
    We're also making sure EchoId fits in with the broader decentralized identity scene. We want to make sure our system talks nicely with other identity systems out there.
 
+6. **SDK Development**:
+   We will build a comprehensive SDK to simplify the integration of the EchoId protocol. This SDK will enable any developer to easily incorporate EchoId functionality into their applications
+
 ## FlowChart after New updates
 
 ![alt text](image-1.png)
@@ -61,10 +74,6 @@ We've got some exciting plans cooking for the future. Let's talk about where we'
 5. And of course, we'll be all ears for your feedback. This is your identity system, after all!
 
 We're super pumped about these upgrades, and we hope you are too! Stay tuned for more updates as we work on making EchoId even more awesome.
-
-# EchoId Protocol
-
-[Previous sections remain unchanged]
 
 ## Use Cases
 
@@ -130,5 +139,3 @@ Here are some use cases:
     - Enable secure device-to-device communication and authentication
 
 These use cases demonstrate the versatility and potential impact of the EchoId Protocol in various industries and applications. By providing a unified, cross-chain identity solution, EchoId enables developers to build more connected, secure, and user-friendly decentralized applications.
-
-[Rest of the document remains unchanged]
