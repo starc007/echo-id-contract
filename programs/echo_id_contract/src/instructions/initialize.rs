@@ -1,23 +1,22 @@
 use anchor_lang::prelude::*;
 use crate::state::AdminConfig;
+use light_sdk::{
+    compressed_account::LightAccount, light_accounts, merkle_context::PackedAddressMerkleContext
+};
 
-#[derive(Accounts)]
+use crate::ParamsInitialize;
+
+#[light_accounts]
 pub struct Initialize<'info> {
     #[account(mut)]
+    #[fee_payer]
+    #[authority]
     pub admin: Signer<'info>,
-    #[account(
+    #[light_account(
         init,
-        payer = admin,
-        space = 8 + 32,
         seeds = [b"admin"],
-        bump
     )]
-    pub admin_config: Account<'info, AdminConfig>,
-    pub system_program: Program<'info, System>,
-}
-
-pub fn handler(ctx: Context<Initialize>) -> Result<()> {
-    let admin_config = &mut ctx.accounts.admin_config;
-    admin_config.admin = ctx.accounts.admin.key();
-    Ok(())
+    pub admin_config: LightAccount<AdminConfig>,
+     #[self_program]
+    pub self_program: Program<'info, crate::program::EchoIdContract>,
 }
