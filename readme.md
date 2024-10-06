@@ -2,6 +2,12 @@
 
 EchoId is a Solana-based decentralized identity system enabling user-owned, cross-chain identities with compressed metadata and integrated reputation. This project is built using the Anchor framework.
 
+## Compressed Account using zk compression
+
+```
+check -> feat/compression branch
+```
+
 ## Features
 
 - User-owned identities
